@@ -25,7 +25,7 @@ from .api import (
     async_has_ip_control,
     async_probe,
 )
-from .const import CONF_MAX_VOLUME, DEFAULT_MAX_VOLUME, DOMAIN, HIFISYNC_URL
+from .const import CONF_MAX_VOLUME, CORE_HEGEL_URL, DEFAULT_MAX_VOLUME, DOMAIN, HIFISYNC_URL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Schema({vol.Required(CONF_HOST): str}), user_input
             ),
             errors=errors,
-            description_placeholders={"hifisync_url": HIFISYNC_URL},
+            description_placeholders={"hifisync_url": HIFISYNC_URL, "core_url": CORE_HEGEL_URL},
         )
 
     async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
@@ -86,7 +86,10 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
             self._async_follow_new_host(host)
         device, error = await self._probe(host)
         if not device:
-            return self.async_abort(reason=error or "cannot_connect")
+            return self.async_abort(
+                reason=error or "cannot_connect",
+                description_placeholders={"core_url": CORE_HEGEL_URL},
+            )
         await self.async_set_unique_id(device.unique_id)
         self._async_follow_new_host(host)
         self._host, self._device = host, device
@@ -154,6 +157,7 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Schema({vol.Required(CONF_HOST): str}), user_input or entry.data
             ),
             errors=errors,
+            description_placeholders={"core_url": CORE_HEGEL_URL},
         )
 
 

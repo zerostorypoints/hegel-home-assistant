@@ -27,7 +27,7 @@
       "cannot_connect": "Wzmacniacz nie odpowiada. Sprawdź adres i czy wzmacniacz ma zasilanie (tryb czuwania wystarczy).",
       "not_hegel": "Urządzenie odpowiada, ale nie wygląda na wzmacniacz Hegel.",
       "unknown": "Nieoczekiwany błąd.",
-      "legacy_model": "To starszy wzmacniacz Hegel (H95, H120, H190, H390, H590 lub podobny), sterowany przez Hegel IP control. Dodaj go wbudowaną w Home Assistant integracją Hegel: https://www.home-assistant.io/integrations/hegel/"
+      "legacy_model": "To starszy wzmacniacz Hegel (H95, H120, H190, H390, H590 lub podobny), sterowany przez Hegel IP control. Dodaj go wbudowaną w Home Assistant [integracją Hegel]({core_url})."
     },
     "abort": {
       "already_configured": "Ten wzmacniacz jest już dodany.",
@@ -35,7 +35,7 @@
       "not_hegel": "Wykryte urządzenie nie jest wzmacniaczem Hegel.",
       "reconfigure_successful": "Adres został zmieniony.",
       "wrong_device": "Pod tym adresem odpowiada inny wzmacniacz.",
-      "legacy_model": "To starszy wzmacniacz Hegel (H95, H120, H190, H390, H590 lub podobny), sterowany przez Hegel IP control. Dodaj go wbudowaną w Home Assistant integracją Hegel: https://www.home-assistant.io/integrations/hegel/"
+      "legacy_model": "To starszy wzmacniacz Hegel (H95, H120, H190, H390, H590 lub podobny), sterowany przez Hegel IP control. Dodaj go wbudowaną w Home Assistant [integracją Hegel]({core_url})."
     }
   },
   "options": {

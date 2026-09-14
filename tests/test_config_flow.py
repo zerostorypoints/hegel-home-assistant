@@ -82,6 +82,7 @@ async def test_user_flow_legacy_model(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": HOST})
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "legacy_model"}
+    assert result["description_placeholders"]["core_url"].endswith("/integrations/hegel/")
     ip_control.assert_awaited_once_with(HOST)
 
 
