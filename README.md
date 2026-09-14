@@ -35,17 +35,38 @@ mute, input, playback, now playing and the stream format. No cloud and no accoun
 
 ## Supported amplifiers
 
-Hegel amplifiers with the built-in streaming board and the web client at
-`http://<amp-address>/webclient/`.
+Hegel has two generations of network amplifiers, and they are controlled in different ways.
+
+### Streaming generation: this integration
+
+The H150, H400 and H600 run a StreamUnlimited streaming platform. They are set up with the
+[Hegel Control app](https://support.hegel.com/product-articles/hegel-setup-app) and have a web
+client at `http://<amp-address>/webclient/`. This integration uses the same local web API as that
+app and web client.
 
 | Model | Firmware | Status |
 |---|---|---|
 | H400 | 1205.1011 | Tested |
-| Other current streaming models | | Expected to work, not tested yet. Please open an issue with your result. |
+| H150, H600 | | Same platform, expected to work, not tested yet |
+| H200 | | Listed in the H400 firmware's model table, so probably the same platform; not tested |
 
-Home Assistant also ships a [Hegel integration](https://www.home-assistant.io/integrations/hegel/)
-that uses Hegel's IP control protocol on TCP port 50001. On the H400 tested here that port is
-open but does not answer, which is why this integration uses the amp's web API instead.
+If you own one of the untested models, please
+[report whether it works](https://github.com/zerostorypoints/hegel-home-assistant/issues/new?template=model_report.yml).
+
+A quick check: if `http://<amp-address>/webclient/` opens a Hegel page, the amp is on this
+platform.
+
+### IP control generation: Home Assistant's built-in Hegel integration
+
+The H95, H120, H190, H190V, H390, H590 and Röst are controlled with Hegel's IP control protocol on
+TCP port 50001, documented in Hegel's IP control code sheets. Use the
+[Hegel integration](https://www.home-assistant.io/integrations/hegel/) that ships with Home
+Assistant. That protocol offers power, volume, mute and input, but no track information or stream
+format, so this integration would add nothing for those models.
+
+The streaming generation does not implement IP control: on the H400 port 50001 accepts
+connections but never answers, whether the amp is on or in standby, and Hegel publishes no IP
+control codes for it. The built-in integration therefore does not work with these models.
 
 ## Installation
 
