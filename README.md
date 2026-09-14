@@ -142,6 +142,11 @@ Settings → Devices & services → Hegel Streaming → **Configure**:
 
 - **Maximum volume** (10–100, default 100). Home Assistant never sets the volume above it. The
   amp's remote and front knob are not limited.
+- **Input names.** Give inputs your own names, for example `Turntable` for `Analog 1`. The media
+  player's input list and current input use them. The amplifier cannot rename inputs itself.
+- **Hidden inputs.** Leave unused inputs out of the input list.
+
+Input names and hidden inputs appear once the integration has seen the amp switched on.
 
 ## Examples
 

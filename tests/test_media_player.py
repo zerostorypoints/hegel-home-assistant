@@ -159,6 +159,58 @@ async def test_commands(hass: HomeAssistant, config_entry, client, no_event_loop
         await call(SERVICE_SELECT_SOURCE, **{ATTR_INPUT_SOURCE: "Phono"})
 
 
+async def test_custom_and_hidden_inputs(hass: HomeAssistant, client, no_event_loop) -> None:
+    client.get_state.return_value = playing_state(
+        source=2,
+        player={"state": "stopped", "trackRoles": {"mediaData": {"metaData": {"serviceName": ""}}}},
+    )
+    entry = MockConfigEntry(
+        domain="hegel_streaming",
+        unique_id="x",
+        data={"host": HOST},
+        options={"source_names": {"Analog 1": "Turntable"}, "hidden_sources": ["XLR", "USB"]},
+    )
+    await setup(hass, entry)
+    state = hass.states.get(PLAYER)
+    assert state.state == STATE_ON
+    assert state.attributes[ATTR_INPUT_SOURCE] == "Turntable"
+    assert state.attributes["source_list"] == ["Turntable", "Analog 2", "Network"]
+    # Nothing is streaming on a physical input: no media attributes.
+    assert "media_content_type" not in state.attributes
+    assert "media_title" not in state.attributes
+
+    await hass.services.async_call(
+        MP_DOMAIN,
+        SERVICE_SELECT_SOURCE,
+        {ATTR_ENTITY_ID: PLAYER, ATTR_INPUT_SOURCE: "Turntable"},
+        blocking=True,
+    )
+    client.set_source.assert_awaited_with(2)
+    # The amp's own name still works, hidden or not.
+    await hass.services.async_call(
+        MP_DOMAIN,
+        SERVICE_SELECT_SOURCE,
+        {ATTR_ENTITY_ID: PLAYER, ATTR_INPUT_SOURCE: "XLR"},
+        blocking=True,
+    )
+    client.set_source.assert_awaited_with(1)
+
+
+async def test_sources_cached_for_offline_start(
+    hass: HomeAssistant, config_entry, client, no_event_loop
+) -> None:
+    await setup(hass, config_entry)
+    assert config_entry.data["sources"]["2"] == "Analog 1"
+    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    client.get_device_info.side_effect = HegelConnectionError("timeout")
+    client.get_state.side_effect = HegelConnectionError("timeout")
+    client.get_sources.reset_mock()
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert config_entry.runtime_data.sources[2] == "Analog 1"
+    client.get_sources.assert_not_called()
+
+
 async def test_volume_limit(hass: HomeAssistant, client, no_event_loop) -> None:
     entry = MockConfigEntry(
         domain="hegel_streaming", unique_id="x", data={"host": HOST}, options={CONF_MAX_VOLUME: 60}

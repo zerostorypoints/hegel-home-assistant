@@ -16,7 +16,13 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .api import HegelError
-from .const import CONF_MAX_VOLUME, DEFAULT_MAX_VOLUME, DOMAIN
+from .const import (
+    CONF_HIDDEN_SOURCES,
+    CONF_MAX_VOLUME,
+    CONF_SOURCE_NAMES,
+    DEFAULT_MAX_VOLUME,
+    DOMAIN,
+)
 from .coordinator import HegelConfigEntry, HegelCoordinator
 from .entity import HegelEntity
 
@@ -61,9 +67,11 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
 
     def __init__(self, coordinator: HegelCoordinator) -> None:
         super().__init__(coordinator)
-        self._max_volume = int(
-            coordinator.config_entry.options.get(CONF_MAX_VOLUME, DEFAULT_MAX_VOLUME)
-        )
+        options = coordinator.config_entry.options
+        self._max_volume = int(options.get(CONF_MAX_VOLUME, DEFAULT_MAX_VOLUME))
+        # Keyed by the amp's own input name, e.g. {"Analog 1": "Turntable"}.
+        self._source_names: dict[str, str] = options.get(CONF_SOURCE_NAMES, {})
+        self._hidden_sources: set[str] = set(options.get(CONF_HIDDEN_SOURCES, []))
         self._update_attrs()
 
     @callback
@@ -88,15 +96,21 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
             return
 
         sources = self.coordinator.sources
-        self._attr_source_list = list(sources.values()) or None
-        self._attr_source = sources.get(state.source) if state.source else None
+        self._attr_source_list = [
+            self._display_name(name)
+            for name in sources.values()
+            if name not in self._hidden_sources
+        ] or None
+        amp_name = sources.get(state.source) if state.source else None
+        self._attr_source = self._display_name(amp_name) if amp_name else None
         self._attr_volume_level = state.volume / 100 if state.volume is not None else None
         self._attr_is_volume_muted = state.muted
 
         player = state.player
         self._attr_state = PLAYER_STATES.get(player.get("state"), MediaPlayerState.ON)
         track = player.get("trackRoles") or {}
-        if not track:
+        # On a physical input the amp still sends trackRoles, with empty metadata.
+        if not track.get("title"):
             self._clear_media()
             return
         meta = (track.get("mediaData") or {}).get("metaData") or {}
@@ -116,6 +130,9 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
         else:
             self._attr_media_position = None
             self._attr_media_position_updated_at = None
+
+    def _display_name(self, amp_name: str) -> str:
+        return self._source_names.get(amp_name) or amp_name
 
     def _clear_media(self) -> None:
         self._attr_media_content_type = None
@@ -170,7 +187,14 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
         await self._call(lambda: self.coordinator.client.set_mute(mute))
 
     async def async_select_source(self, source: str) -> None:
-        index = next((i for i, name in self.coordinator.sources.items() if name == source), None)
+        index = next(
+            (
+                i
+                for i, name in self.coordinator.sources.items()
+                if source in (name, self._display_name(name))
+            ),
+            None,
+        )
         if index is None:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,

@@ -8,7 +8,7 @@ from dataclasses import replace
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import (
@@ -22,7 +22,7 @@ from .api import (
     HegelQueueExpiredError,
     HegelState,
 )
-from .const import DOMAIN, EVENT_POLL_TIMEOUT, RECONNECT_INTERVAL, SCAN_INTERVAL
+from .const import CONF_SOURCES, DOMAIN, EVENT_POLL_TIMEOUT, RECONNECT_INTERVAL, SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,14 +55,18 @@ class HegelCoordinator(DataUpdateCoordinator[HegelState]):
         )
         self.client = client
         self.device = device
-        self.sources: dict[int, str] = {}
+        # Inputs as the amp names them, cached in the entry so they are known while it is off.
+        self.sources: dict[int, str] = {
+            int(index): name for index, name in entry.data.get(CONF_SOURCES, {}).items()
+        }
+        self._sources_fresh = False
         self._was_reachable = True
 
     async def _async_update_data(self) -> HegelState:
         try:
             state = await self.client.get_state()
-            if not self.sources and state.is_on:
-                self.sources = await self.client.get_sources()
+            if not self._sources_fresh and state.is_on:
+                self._async_set_sources(await self.client.get_sources())
         except HegelConnectionError as err:
             if self._was_reachable:
                 _LOGGER.info("%s is not responding, reporting it as off: %s", self.device.name, err)
@@ -75,6 +79,18 @@ class HegelCoordinator(DataUpdateCoordinator[HegelState]):
             _LOGGER.info("%s is responding again", self.device.name)
         self._was_reachable = True
         return state
+
+    @callback
+    def _async_set_sources(self, sources: dict[int, str]) -> None:
+        if not sources:
+            return
+        self._sources_fresh = True
+        self.sources = sources
+        cached = {str(index): name for index, name in sources.items()}
+        if self.config_entry.data.get(CONF_SOURCES) != cached:
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data={**self.config_entry.data, CONF_SOURCES: cached}
+            )
 
     async def async_run_event_loop(self) -> None:
         """Long-poll the amp's event queue for as long as the entry is loaded."""
@@ -116,8 +132,8 @@ class HegelCoordinator(DataUpdateCoordinator[HegelState]):
                 state.apply(PATH_PLAY_TIME, await self.client.get(PATH_PLAY_TIME))
             except HegelError:
                 state.play_time_ms = None
-        if PATH_POWER in changed_paths and state.is_on and not self.sources:
+        if PATH_POWER in changed_paths and state.is_on and not self._sources_fresh:
             with contextlib.suppress(HegelError):
-                self.sources = await self.client.get_sources()
+                self._async_set_sources(await self.client.get_sources())
         self._was_reachable = True
         self.async_set_updated_data(state)

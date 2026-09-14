@@ -50,6 +50,13 @@
           "max_volume": "Home Assistant never sets the volume above this, so a slipped slider cannot drive the amp to full power. The amp's own remote is not limited."
         },
         "description": "Brought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics. Made by [Zero Story Points]({zsp_url})."
+      },
+      "inputs": {
+        "title": "Inputs",
+        "description": "Give inputs your own names, for example Turntable for Analog 1. Leave a field empty to keep the amplifier's name. Hidden inputs are left out of the input list; the amplifier can still switch to them.\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics. Made by [Zero Story Points]({zsp_url}).",
+        "data": {
+          "hidden_sources": "Hidden inputs"
+        }
       }
     }
   },

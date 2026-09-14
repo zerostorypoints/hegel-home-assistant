@@ -50,6 +50,13 @@
           "max_volume": "Home Assistant nigdy nie ustawi głośności powyżej tej wartości, więc przypadkowo przesunięty suwak nie podkręci wzmacniacza na pełną moc. Pilot wzmacniacza nie jest ograniczony."
         },
         "description": "Przygotowane przez [HiFiSync]({hifisync_url}): dobór systemu hi-fi oparty na fizyce. Autor: [Zero Story Points]({zsp_url})."
+      },
+      "inputs": {
+        "title": "Wejścia",
+        "description": "Nadaj wejściom własne nazwy, na przykład Gramofon dla Analog 1. Puste pole zostawia nazwę ze wzmacniacza. Ukryte wejścia nie pojawiają się na liście; wzmacniacz nadal może się na nie przełączyć.\n\nPrzygotowane przez [HiFiSync]({hifisync_url}): dobór systemu hi-fi oparty na fizyce. Autor: [Zero Story Points]({zsp_url}).",
+        "data": {
+          "hidden_sources": "Ukryte wejścia"
+        }
       }
     }
   },

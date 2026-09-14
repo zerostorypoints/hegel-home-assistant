@@ -12,7 +12,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.hegel_streaming.api import HegelConnectionError
+from custom_components.hegel_streaming.api import HegelConnectionError, HegelState
 from custom_components.hegel_streaming.const import CONF_MAX_VOLUME, DOMAIN
 
 from .conftest import DEVICE, HOST, UNIQUE_ID
@@ -179,6 +179,42 @@ async def test_options_flow(
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {CONF_MAX_VOLUME: 60}
     )
+    # Inputs are known (cached by the coordinator), so the second step follows.
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "inputs"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"Analog 1": " Turntable ", "USB": "USB", "XLR": "", "hidden_sources": ["XLR", "Analog 2"]},
+    )
     await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert config_entry.options == {CONF_MAX_VOLUME: 60}
+    assert config_entry.options == {
+        CONF_MAX_VOLUME: 60,
+        "source_names": {"Analog 1": "Turntable"},
+        "hidden_sources": ["XLR", "Analog 2"],
+    }
+    assert config_entry.data["sources"] == {
+        "1": "XLR",
+        "2": "Analog 1",
+        "3": "Analog 2",
+        "9": "USB",
+        "10": "Network",
+    }
+
+
+async def test_options_flow_without_known_inputs(
+    hass: HomeAssistant, client, no_event_loop
+) -> None:
+    """An amp never seen on has no input list yet: only the volume step."""
+    client.get_state.return_value = HegelState(reachable=True, power="networkStandby")
+    entry = MockConfigEntry(domain=DOMAIN, unique_id=UNIQUE_ID, data={"host": HOST})
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_MAX_VOLUME: 70}
+    )
+    await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {CONF_MAX_VOLUME: 70}

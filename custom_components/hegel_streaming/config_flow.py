@@ -26,7 +26,10 @@ from .api import (
     async_probe,
 )
 from .const import (
+    CONF_HIDDEN_SOURCES,
     CONF_MAX_VOLUME,
+    CONF_SOURCE_NAMES,
+    CONF_SOURCES,
     CORE_HEGEL_URL,
     DEFAULT_MAX_VOLUME,
     DOMAIN,
@@ -171,11 +174,22 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class HegelOptionsFlow(OptionsFlowWithReload):
-    """Volume limit."""
+    """Volume limit, then input names and hidden inputs."""
+
+    def __init__(self) -> None:
+        self._options: dict[str, Any] = {}
+
+    def _amp_sources(self) -> list[str]:
+        """Input names as the amp reports them, in the amp's order."""
+        cached = self.config_entry.data.get(CONF_SOURCES, {})
+        return [cached[k] for k in sorted(cached, key=int)]
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            self._options = {CONF_MAX_VOLUME: user_input[CONF_MAX_VOLUME]}
+            if self._amp_sources():
+                return await self.async_step_inputs()
+            return self.async_create_entry(data={**self.config_entry.options, **self._options})
         schema = vol.Schema(
             {
                 vol.Required(CONF_MAX_VOLUME, default=DEFAULT_MAX_VOLUME): selector.NumberSelector(
@@ -189,4 +203,40 @@ class HegelOptionsFlow(OptionsFlowWithReload):
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(schema, self.config_entry.options),
             description_placeholders=CREDITS,
+        )
+
+    async def async_step_inputs(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """One name field per input (labelled with the amp's name) and a list to hide."""
+        sources = self._amp_sources()
+        if user_input is not None:
+            names = {
+                amp: custom.strip()
+                for amp in sources
+                if (custom := (user_input.get(amp) or "").strip()) and custom != amp
+            }
+            hidden = [amp for amp in sources if amp in user_input.get(CONF_HIDDEN_SOURCES, [])]
+            return self.async_create_entry(
+                data={**self._options, CONF_SOURCE_NAMES: names, CONF_HIDDEN_SOURCES: hidden}
+            )
+        current_names: dict[str, str] = self.config_entry.options.get(CONF_SOURCE_NAMES, {})
+        fields: dict[Any, Any] = {
+            vol.Optional(amp, description={"suggested_value": current_names.get(amp, "")}): str
+            for amp in sources
+        }
+        fields[
+            vol.Optional(
+                CONF_HIDDEN_SOURCES,
+                default=[
+                    a
+                    for a in self.config_entry.options.get(CONF_HIDDEN_SOURCES, [])
+                    if a in sources
+                ],
+            )
+        ] = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=sources, multiple=True, mode=selector.SelectSelectorMode.LIST
+            )
+        )
+        return self.async_show_form(
+            step_id="inputs", data_schema=vol.Schema(fields), description_placeholders=CREDITS
         )

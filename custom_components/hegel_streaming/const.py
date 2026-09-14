@@ -7,6 +7,9 @@ DOMAIN: Final = "hegel_streaming"
 
 CONF_DEVICE: Final = "device"
 CONF_MAX_VOLUME: Final = "max_volume"
+CONF_HIDDEN_SOURCES: Final = "hidden_sources"
+CONF_SOURCE_NAMES: Final = "source_names"
+CONF_SOURCES: Final = "sources"
 DEFAULT_MAX_VOLUME: Final = 100
 
 # Full refresh as a safety net; changes arrive through the event queue in between.
