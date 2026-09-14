@@ -223,3 +223,17 @@ async def test_diagnostics_and_unload(
 
     assert await hass.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.NOT_LOADED
+
+
+async def test_icons_file_matches_entities() -> None:
+    """Every translation key has an icon, and no icon points at a missing entity."""
+    import json
+    from pathlib import Path
+
+    from custom_components.hegel_streaming.sensor import QUALITY_OPTIONS, SENSORS
+
+    root = Path(__file__).parent.parent / "custom_components" / "hegel_streaming"
+    icons = json.loads((root / "icons.json").read_text())["entity"]
+    assert set(icons["sensor"]) == {d.translation_key for d in SENSORS}
+    assert set(icons["sensor"]["audio_quality"]["state"]) == set(QUALITY_OPTIONS)
+    assert set(icons["binary_sensor"]) == {"network"}
