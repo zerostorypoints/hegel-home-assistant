@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, patch
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import pytest
@@ -12,6 +14,7 @@ from custom_components.hegel_streaming.api import (
     HegelConnectionError,
     HegelQueueExpiredError,
     HegelState,
+    async_has_ip_control,
     unwrap,
 )
 
@@ -98,3 +101,50 @@ async def test_power_on_payload(hass: HomeAssistant, aioclient_mock: AiohttpClie
         "role": "activate",
         "value": {},
     }
+
+
+def _fake_connection(reply: bytes | None):
+    """Stand-in for asyncio.open_connection to port 50001 (tests may not open sockets)."""
+    import asyncio
+    from unittest.mock import MagicMock
+
+    async def open_connection(host, port):
+        reader = asyncio.StreamReader()
+        if reply is not None:
+            reader.feed_data(reply)
+            reader.feed_eof()
+        writer = MagicMock()
+        writer.drain = AsyncMock()
+        writer.sent = []
+        writer.write.side_effect = writer.sent.append
+        open_connection.writer = writer
+        return reader, writer
+
+    return open_connection
+
+
+@pytest.mark.parametrize(
+    ("reply", "expected"),
+    [
+        (b"-p.1\r", True),
+        (b"-p.0\r", True),
+        (b"-e.1\r", True),
+        (b"HTTP/1.0 400\r\n", False),
+        (b"", False),
+        (None, False),
+    ],
+)
+async def test_ip_control_probe(reply: bytes | None, expected: bool) -> None:
+    fake = _fake_connection(reply)
+    with patch("custom_components.hegel_streaming.api.asyncio.open_connection", fake):
+        assert await async_has_ip_control("amp", timeout=0.2) is expected
+    assert fake.writer.sent == [b"-p.?\r"]
+    fake.writer.close.assert_called_once()
+
+
+async def test_ip_control_probe_refused() -> None:
+    with patch(
+        "custom_components.hegel_streaming.api.asyncio.open_connection",
+        AsyncMock(side_effect=ConnectionRefusedError),
+    ):
+        assert await async_has_ip_control("amp", timeout=0.2) is False

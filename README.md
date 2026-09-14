@@ -64,6 +64,10 @@ TCP port 50001, documented in Hegel's IP control code sheets. Use the
 Assistant. That protocol offers power, volume, mute and input, but no track information or stream
 format, so this integration would add nothing for those models.
 
+If you try to add one of these older amplifiers to this integration, the setup dialog recognises
+it (it answers an IP control status query on port 50001) and points you to the built-in
+integration.
+
 The streaming generation does not implement IP control: on the H400 port 50001 accepts
 connections but never answers, whether the amp is on or in standby, and Hegel publishes no IP
 control codes for it. The built-in integration therefore does not work with these models.

@@ -26,14 +26,16 @@
     "error": {
       "cannot_connect": "The amplifier did not answer. Check the address and that the amp is powered at the mains (standby is fine).",
       "not_hegel": "A device answered, but it does not look like a Hegel streaming amplifier.",
-      "unknown": "Unexpected error."
+      "unknown": "Unexpected error.",
+      "legacy_model": "This is an older Hegel amplifier (H95, H120, H190, H390, H590 or similar) that uses Hegel IP control. Add it with the Hegel integration built into Home Assistant instead: https://www.home-assistant.io/integrations/hegel/"
     },
     "abort": {
       "already_configured": "This amplifier is already set up.",
       "cannot_connect": "The amplifier did not answer.",
       "not_hegel": "The discovered device is not a Hegel amplifier.",
       "reconfigure_successful": "The address was updated.",
-      "wrong_device": "A different amplifier answers at this address."
+      "wrong_device": "A different amplifier answers at this address.",
+      "legacy_model": "This is an older Hegel amplifier (H95, H120, H190, H390, H590 or similar) that uses Hegel IP control. Add it with the Hegel integration built into Home Assistant instead: https://www.home-assistant.io/integrations/hegel/"
     }
   },
   "options": {

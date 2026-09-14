@@ -18,7 +18,13 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 import voluptuous as vol
 
-from .api import HegelConnectionError, HegelDeviceInfo, HegelError, async_probe
+from .api import (
+    HegelConnectionError,
+    HegelDeviceInfo,
+    HegelError,
+    async_has_ip_control,
+    async_probe,
+)
 from .const import CONF_MAX_VOLUME, DEFAULT_MAX_VOLUME, DOMAIN, HIFISYNC_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,10 +48,14 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             return await async_probe(host, async_get_clientsession(self.hass)), None
         except (HegelConnectionError, TimeoutError):
-            return None, "cannot_connect"
+            error = "cannot_connect"
         except HegelError:
             _LOGGER.exception("Unexpected answer from %s", host)
-            return None, "not_hegel"
+            error = "not_hegel"
+        # An older Hegel amp has no web API but answers IP control: point to the core integration.
+        if await async_has_ip_control(host):
+            return None, "legacy_model"
+        return None, error
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}

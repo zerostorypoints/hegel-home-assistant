@@ -18,6 +18,7 @@ from custom_components.hegel_streaming.const import CONF_MAX_VOLUME, DOMAIN
 from .conftest import DEVICE, HOST, UNIQUE_ID
 
 PROBE = "custom_components.hegel_streaming.config_flow.async_probe"
+IP_CONTROL = "custom_components.hegel_streaming.config_flow.async_has_ip_control"
 SETUP = "custom_components.hegel_streaming.async_setup_entry"
 
 ZEROCONF = ZeroconfServiceInfo(
@@ -57,7 +58,10 @@ async def test_user_flow_cannot_connect(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    with patch(PROBE, side_effect=HegelConnectionError("timeout")):
+    with (
+        patch(PROBE, side_effect=HegelConnectionError("timeout")),
+        patch(IP_CONTROL, return_value=False),
+    ):
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": HOST})
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
@@ -65,6 +69,20 @@ async def test_user_flow_cannot_connect(hass: HomeAssistant) -> None:
     with patch(PROBE, return_value=DEVICE), patch(SETUP, return_value=True):
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": HOST})
     assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+async def test_user_flow_legacy_model(hass: HomeAssistant) -> None:
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    with (
+        patch(PROBE, side_effect=HegelConnectionError("timeout")),
+        patch(IP_CONTROL, return_value=True) as ip_control,
+    ):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": HOST})
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "legacy_model"}
+    ip_control.assert_awaited_once_with(HOST)
 
 
 async def test_user_flow_already_configured(

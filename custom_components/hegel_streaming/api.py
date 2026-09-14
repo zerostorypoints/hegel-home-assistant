@@ -280,6 +280,31 @@ class HegelClient:
         return events if isinstance(events, list) else []
 
 
+IP_CONTROL_PORT = 50001
+
+
+async def async_has_ip_control(host: str, timeout: float = 3) -> bool:
+    """Return True if an older Hegel amplifier answers Hegel IP control on port 50001.
+
+    Only sends the power status query "-p.?". Amplifiers of the IP control generation
+    (H95 to H590, Röst) reply "-p.0" or "-p.1", or "-e..." for an error. The streaming
+    generation accepts the connection but never replies.
+    """
+    writer = None
+    try:
+        async with asyncio.timeout(timeout):
+            reader, writer = await asyncio.open_connection(host, IP_CONTROL_PORT)
+            writer.write(b"-p.?\r")
+            await writer.drain()
+            reply = await reader.readuntil(b"\r")
+    except (OSError, TimeoutError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):
+        return False
+    finally:
+        if writer is not None:
+            writer.close()
+    return reply.startswith((b"-p.", b"-e"))
+
+
 async def async_probe(host: str, session: aiohttp.ClientSession) -> HegelDeviceInfo:
     """Connect once and return the device info. Used by the config flow."""
     client = HegelClient(host, session)
