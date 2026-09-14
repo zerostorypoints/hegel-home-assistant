@@ -9,7 +9,7 @@
   "issue_tracker": "https://github.com/zerostorypoints/hegel-home-assistant/issues",
   "loggers": ["custom_components.hegel_streaming"],
   "requirements": [],
-  "version": "0.1.4",
+  "version": "0.1.5",
   "zeroconf": [
     {
       "type": "_sues800device._tcp.local.",

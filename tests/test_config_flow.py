@@ -174,6 +174,8 @@ async def test_options_flow(
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
+    assert result["description_placeholders"]["zsp_url"].startswith("https://zerostorypoints.com/")
+    assert result["description_placeholders"]["hifisync_url"].startswith("https://hifisync.com/")
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {CONF_MAX_VOLUME: 60}
     )

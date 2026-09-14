@@ -25,7 +25,16 @@ from .api import (
     async_has_ip_control,
     async_probe,
 )
-from .const import CONF_MAX_VOLUME, CORE_HEGEL_URL, DEFAULT_MAX_VOLUME, DOMAIN, HIFISYNC_URL
+from .const import (
+    CONF_MAX_VOLUME,
+    CORE_HEGEL_URL,
+    DEFAULT_MAX_VOLUME,
+    DOMAIN,
+    HIFISYNC_URL,
+    ZSP_URL,
+)
+
+CREDITS = {"hifisync_url": HIFISYNC_URL, "zsp_url": ZSP_URL}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,7 +82,7 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Schema({vol.Required(CONF_HOST): str}), user_input
             ),
             errors=errors,
-            description_placeholders={"hifisync_url": HIFISYNC_URL, "core_url": CORE_HEGEL_URL},
+            description_placeholders={**CREDITS, "core_url": CORE_HEGEL_URL},
         )
 
     async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
@@ -134,7 +143,7 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
                 "name": self._device.name,
                 "model": self._device.model,
                 "host": self._host,
-                "hifisync_url": HIFISYNC_URL,
+                **CREDITS,
             },
         )
 
@@ -157,7 +166,7 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Schema({vol.Required(CONF_HOST): str}), user_input or entry.data
             ),
             errors=errors,
-            description_placeholders={"core_url": CORE_HEGEL_URL},
+            description_placeholders={**CREDITS, "core_url": CORE_HEGEL_URL},
         )
 
 
@@ -179,4 +188,5 @@ class HegelOptionsFlow(OptionsFlowWithReload):
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(schema, self.config_entry.options),
+            description_placeholders=CREDITS,
         )
