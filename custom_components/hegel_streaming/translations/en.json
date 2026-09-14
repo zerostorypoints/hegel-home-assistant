@@ -1,0 +1,100 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Hegel amplifier",
+        "description": "Enter the IP address or host name of your Hegel streaming amplifier. It must be on the same network as Home Assistant.\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics.",
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "For example 192.168.1.50. Reserve the address in your router so it does not change."
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Hegel amplifier found",
+        "description": "Add {name} ({model}) at {host}?\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics."
+      },
+      "reconfigure": {
+        "title": "Change the amplifier address",
+        "data": {
+          "host": "Host"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "The amplifier did not answer. Check the address and that the amp is powered at the mains (standby is fine).",
+      "not_hegel": "A device answered, but it does not look like a Hegel streaming amplifier.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This amplifier is already set up.",
+      "cannot_connect": "The amplifier did not answer.",
+      "not_hegel": "The discovered device is not a Hegel amplifier.",
+      "reconfigure_successful": "The address was updated.",
+      "wrong_device": "A different amplifier answers at this address."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hegel options",
+        "data": {
+          "max_volume": "Maximum volume"
+        },
+        "data_description": {
+          "max_volume": "Home Assistant never sets the volume above this, so a slipped slider cannot drive the amp to full power. The amp's own remote is not limited."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "network": {
+        "name": "Network"
+      }
+    },
+    "sensor": {
+      "audio_quality": {
+        "name": "Audio quality",
+        "state": {
+          "hi_res": "Hi-Res",
+          "cd": "CD quality",
+          "lossless": "Lossless",
+          "lossy": "Lossy",
+          "dsd": "DSD"
+        }
+      },
+      "codec": {
+        "name": "Codec"
+      },
+      "sample_rate": {
+        "name": "Sample rate"
+      },
+      "bit_depth": {
+        "name": "Bit depth"
+      },
+      "bitrate": {
+        "name": "Bitrate"
+      },
+      "streaming_service": {
+        "name": "Streaming service"
+      }
+    }
+  },
+  "exceptions": {
+    "not_responding": {
+      "message": "The amplifier at {host} is not responding. It is switched off at the mains or disconnected; turn it on at the amp."
+    },
+    "turned_off": {
+      "message": "The amplifier is turned off. Turn it on first."
+    },
+    "unknown_source": {
+      "message": "This amplifier has no input called {source}."
+    },
+    "command_failed": {
+      "message": "The amplifier rejected the command: {error}"
+    }
+  }
+}

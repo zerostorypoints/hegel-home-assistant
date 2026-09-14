@@ -1,0 +1,100 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Wzmacniacz Hegel",
+        "description": "Podaj adres IP lub nazwę hosta wzmacniacza Hegel z funkcją streamingu. Musi być w tej samej sieci co Home Assistant.\n\nPrzygotowane przez [HiFiSync]({hifisync_url}): dobór systemu hi-fi oparty na fizyce.",
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "Na przykład 192.168.1.50. Zarezerwuj adres w routerze, żeby się nie zmieniał."
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Znaleziono wzmacniacz Hegel",
+        "description": "Dodać {name} ({model}) pod adresem {host}?\n\nPrzygotowane przez [HiFiSync]({hifisync_url}): dobór systemu hi-fi oparty na fizyce."
+      },
+      "reconfigure": {
+        "title": "Zmień adres wzmacniacza",
+        "data": {
+          "host": "Host"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Wzmacniacz nie odpowiada. Sprawdź adres i czy wzmacniacz ma zasilanie (tryb czuwania wystarczy).",
+      "not_hegel": "Urządzenie odpowiada, ale nie wygląda na wzmacniacz Hegel.",
+      "unknown": "Nieoczekiwany błąd."
+    },
+    "abort": {
+      "already_configured": "Ten wzmacniacz jest już dodany.",
+      "cannot_connect": "Wzmacniacz nie odpowiada.",
+      "not_hegel": "Wykryte urządzenie nie jest wzmacniaczem Hegel.",
+      "reconfigure_successful": "Adres został zmieniony.",
+      "wrong_device": "Pod tym adresem odpowiada inny wzmacniacz."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ustawienia Hegel",
+        "data": {
+          "max_volume": "Maksymalna głośność"
+        },
+        "data_description": {
+          "max_volume": "Home Assistant nigdy nie ustawi głośności powyżej tej wartości, więc przypadkowo przesunięty suwak nie podkręci wzmacniacza na pełną moc. Pilot wzmacniacza nie jest ograniczony."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "network": {
+        "name": "Sieć"
+      }
+    },
+    "sensor": {
+      "audio_quality": {
+        "name": "Jakość dźwięku",
+        "state": {
+          "hi_res": "Hi-Res",
+          "cd": "Jakość CD",
+          "lossless": "Bezstratny",
+          "lossy": "Stratny",
+          "dsd": "DSD"
+        }
+      },
+      "codec": {
+        "name": "Kodek"
+      },
+      "sample_rate": {
+        "name": "Częstotliwość próbkowania"
+      },
+      "bit_depth": {
+        "name": "Rozdzielczość bitowa"
+      },
+      "bitrate": {
+        "name": "Przepływność"
+      },
+      "streaming_service": {
+        "name": "Serwis streamingowy"
+      }
+    }
+  },
+  "exceptions": {
+    "not_responding": {
+      "message": "Wzmacniacz pod adresem {host} nie odpowiada. Jest wyłączony z zasilania albo odłączony od sieci; włącz go na wzmacniaczu."
+    },
+    "turned_off": {
+      "message": "Wzmacniacz jest wyłączony. Najpierw go włącz."
+    },
+    "unknown_source": {
+      "message": "Ten wzmacniacz nie ma wejścia {source}."
+    },
+    "command_failed": {
+      "message": "Wzmacniacz odrzucił polecenie: {error}"
+    }
+  }
+}
