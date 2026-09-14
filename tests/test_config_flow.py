@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -108,6 +109,24 @@ async def test_zeroconf_updates_host(hass: HomeAssistant, config_entry: MockConf
     assert result["reason"] == "already_configured"
     assert config_entry.data["host"] == HOST
     probe.assert_not_called()
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"address_changed_{config_entry.entry_id}")
+    assert issue is not None
+    assert issue.translation_placeholders == {
+        "name": config_entry.title,
+        "old_host": "10.0.0.2",
+        "new_host": HOST,
+    }
+
+
+async def test_zeroconf_same_host_no_issue(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    config_entry.add_to_hass(hass)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=ZEROCONF
+    )
+    assert result["reason"] == "already_configured"
+    assert not ir.async_get(hass).issues
 
 
 async def test_zeroconf_not_hegel(hass: HomeAssistant) -> None:

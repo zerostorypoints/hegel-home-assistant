@@ -73,8 +73,12 @@ After the restart, Home Assistant lists the amp under Settings → Devices & ser
 
 If it is not discovered (for example when Home Assistant runs in a separate network or VLAN), go
 to Settings → Devices & services → Add integration → **Hegel Streaming** and enter the amp's IP
-address. Reserve that address in your router so it does not change. If it changes anyway,
-discovery updates it, or use **Reconfigure** on the integration.
+address.
+
+**Give the amp a fixed address.** Reserve its IP in your router (a DHCP reservation or static
+lease). If the address changes anyway, discovery picks up the new one by itself and Home
+Assistant shows a notice under Settings → System → Repairs. Without discovery (another VLAN),
+use **Reconfigure** on the integration.
 
 The amp must be powered at the mains; standby is enough.
 

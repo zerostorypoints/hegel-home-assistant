@@ -14,7 +14,7 @@
       },
       "zeroconf_confirm": {
         "title": "Hegel amplifier found",
-        "description": "Add {name} ({model}) at {host}?\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics."
+        "description": "Add {name} ({model}) at {host}?\n\nTip: reserve {host} for the amplifier in your router (a DHCP reservation or static lease). If the address changes, Home Assistant finds the amp again, but only while it is on the network.\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics."
       },
       "reconfigure": {
         "title": "Change the amplifier address",
@@ -95,6 +95,12 @@
     },
     "command_failed": {
       "message": "The amplifier rejected the command: {error}"
+    }
+  },
+  "issues": {
+    "address_changed": {
+      "title": "{name} has a new IP address",
+      "description": "The amplifier moved from {old_host} to {new_host}. Home Assistant has switched to the new address.\n\nTo stop this from happening, reserve {new_host} for the amplifier in your router (a DHCP reservation or static lease). Then ignore or dismiss this message."
     }
   }
 }

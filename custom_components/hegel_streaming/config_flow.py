@@ -13,7 +13,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
-from homeassistant.helpers import selector
+from homeassistant.helpers import issue_registry as ir, selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 import voluptuous as vol
@@ -73,15 +73,40 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
         host = props.get("ip") or discovery_info.host
         if uuid := props.get("uuid"):
             await self.async_set_unique_id(uuid)
-            self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+            self._async_follow_new_host(host)
         device, error = await self._probe(host)
         if not device:
             return self.async_abort(reason=error or "cannot_connect")
         await self.async_set_unique_id(device.unique_id)
-        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+        self._async_follow_new_host(host)
         self._host, self._device = host, device
         self.context["title_placeholders"] = {"name": device.name}
         return await self.async_step_zeroconf_confirm()
+
+    @callback
+    def _async_follow_new_host(self, host: str) -> None:
+        """Abort if the amp is set up, taking over a changed address.
+
+        A changed address means the router gave the amp a new one. It is followed
+        automatically, and a repair issue suggests reserving the address.
+        """
+        entry = self.hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, self.unique_id)
+        if entry and entry.data.get(CONF_HOST) != host:
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                f"address_changed_{entry.entry_id}",
+                is_fixable=False,
+                is_persistent=True,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="address_changed",
+                translation_placeholders={
+                    "name": entry.title,
+                    "old_host": entry.data.get(CONF_HOST, ""),
+                    "new_host": host,
+                },
+            )
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
 
     async def async_step_zeroconf_confirm(
         self, user_input: dict[str, Any] | None = None
