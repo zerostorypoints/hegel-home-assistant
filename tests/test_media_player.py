@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import copy
+
 from homeassistant.components.media_player import (
     ATTR_INPUT_SOURCE,
+    MediaPlayerEntityFeature,
     ATTR_MEDIA_VOLUME_LEVEL,
     ATTR_MEDIA_VOLUME_MUTED,
     DOMAIN as MP_DOMAIN,
@@ -12,7 +15,9 @@ from homeassistant.components.media_player import (
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import (
     ATTR_ENTITY_ID,
+    ATTR_SUPPORTED_FEATURES,
     SERVICE_MEDIA_PAUSE,
+    SERVICE_MEDIA_PLAY,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     SERVICE_VOLUME_MUTE,
@@ -30,7 +35,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.hegel_streaming.api import HegelConnectionError, HegelState
 from custom_components.hegel_streaming.const import CONF_MAX_VOLUME
 
-from .conftest import HOST, playing_state
+from .conftest import HOST, PLAYER_SPOTIFY, playing_state
 
 PLAYER = "media_player.h400"
 
@@ -157,6 +162,38 @@ async def test_commands(hass: HomeAssistant, config_entry, client, no_event_loop
 
     with pytest.raises(ServiceValidationError):
         await call(SERVICE_SELECT_SOURCE, **{ATTR_INPUT_SOURCE: "Phono"})
+
+
+async def test_spotify_play_resumes(
+    hass: HomeAssistant, config_entry, client, no_event_loop
+) -> None:
+    """Play on a Spotify stream goes through spotify:/ui/resume: the player's "play" ends the
+    Spotify session instead ("Directory is empty", seen on an H400 on 2026-10-15)."""
+    await setup(hass, config_entry)
+    await hass.services.async_call(
+        MP_DOMAIN, SERVICE_MEDIA_PLAY, {ATTR_ENTITY_ID: PLAYER}, blocking=True
+    )
+    client.spotify_resume.assert_awaited_once()
+    client.control.assert_not_awaited()
+
+
+async def test_skip_follows_the_player_controls(
+    hass: HomeAssistant, config_entry, client, no_event_loop
+) -> None:
+    """Next and previous are offered only while the amp's player offers them."""
+    await setup(hass, config_entry)
+    features = hass.states.get(PLAYER).attributes[ATTR_SUPPORTED_FEATURES]
+    assert not features & MediaPlayerEntityFeature.NEXT_TRACK
+    assert not features & MediaPlayerEntityFeature.PREVIOUS_TRACK
+    assert features & MediaPlayerEntityFeature.PAUSE
+
+    player = copy.deepcopy(PLAYER_SPOTIFY)
+    player["controls"] = {"pause": True, "next": True, "previous": True}
+    config_entry.runtime_data.async_set_updated_data(playing_state(player=player))
+    await hass.async_block_till_done()
+    features = hass.states.get(PLAYER).attributes[ATTR_SUPPORTED_FEATURES]
+    assert features & MediaPlayerEntityFeature.NEXT_TRACK
+    assert features & MediaPlayerEntityFeature.PREVIOUS_TRACK
 
 
 async def test_custom_and_hidden_inputs(hass: HomeAssistant, client, no_event_loop) -> None:

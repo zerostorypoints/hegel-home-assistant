@@ -35,6 +35,10 @@ PATH_SOURCES = "hegel:listPhysicalSources"
 PATH_PLAYER_DATA = "player:player/data"
 PATH_PLAYER_CONTROL = "player:player/control"
 PATH_PLAY_TIME = "player:player/data/playTime"
+# Spotify Connect: the amp's player takes only "pause" for it (settings:/spotify/allowExternalControls
+# is false and not modifiable, "needs Spotify approval"); "play" after a pause ends the Spotify
+# session with "Directory is empty", while this action resumes it, from paused or stopped.
+PATH_SPOTIFY_RESUME = "spotify:/ui/resume"
 PATH_MEMBER = "systemmanager:systemMember"
 PATH_MODEL = "settings:/system/productName"
 PATH_MANUFACTURER = "settings:/system/manufacturer"
@@ -251,6 +255,10 @@ class HegelClient:
     async def control(self, command: str) -> None:
         """Send a player command: play, pause, stop, next, previous."""
         await self.activate(PATH_PLAYER_CONTROL, {"control": command})
+
+    async def spotify_resume(self) -> None:
+        """Resume Spotify Connect playback (the only "play" the amp accepts for Spotify)."""
+        await self.activate(PATH_SPOTIFY_RESUME)
 
     # Events
 

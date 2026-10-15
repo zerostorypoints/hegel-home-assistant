@@ -35,6 +35,20 @@ PLAYER_STATES = {
     "transitioning": MediaPlayerState.BUFFERING,
 }
 
+BASE_FEATURES = (
+    MediaPlayerEntityFeature.TURN_ON
+    | MediaPlayerEntityFeature.TURN_OFF
+    | MediaPlayerEntityFeature.VOLUME_SET
+    | MediaPlayerEntityFeature.VOLUME_STEP
+    | MediaPlayerEntityFeature.VOLUME_MUTE
+    | MediaPlayerEntityFeature.SELECT_SOURCE
+    | MediaPlayerEntityFeature.PLAY
+    | MediaPlayerEntityFeature.PAUSE
+    | MediaPlayerEntityFeature.STOP
+)
+# Offered while the amp's player offers them (its "controls"): Spotify Connect gives only pause.
+SKIP_FEATURES = MediaPlayerEntityFeature.NEXT_TRACK | MediaPlayerEntityFeature.PREVIOUS_TRACK
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -51,19 +65,7 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
     _attr_device_class = MediaPlayerDeviceClass.RECEIVER
     _attr_media_image_remotely_accessible = False
     _attr_volume_step = 0.01
-    _attr_supported_features = (
-        MediaPlayerEntityFeature.TURN_ON
-        | MediaPlayerEntityFeature.TURN_OFF
-        | MediaPlayerEntityFeature.VOLUME_SET
-        | MediaPlayerEntityFeature.VOLUME_STEP
-        | MediaPlayerEntityFeature.VOLUME_MUTE
-        | MediaPlayerEntityFeature.SELECT_SOURCE
-        | MediaPlayerEntityFeature.PLAY
-        | MediaPlayerEntityFeature.PAUSE
-        | MediaPlayerEntityFeature.STOP
-        | MediaPlayerEntityFeature.NEXT_TRACK
-        | MediaPlayerEntityFeature.PREVIOUS_TRACK
-    )
+    _attr_supported_features = BASE_FEATURES | SKIP_FEATURES
 
     def __init__(self, coordinator: HegelCoordinator) -> None:
         super().__init__(coordinator)
@@ -108,6 +110,12 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
 
         player = state.player
         self._attr_state = PLAYER_STATES.get(player.get("state"), MediaPlayerState.ON)
+        controls = player.get("controls")
+        self._attr_supported_features = BASE_FEATURES | (
+            SKIP_FEATURES
+            if not isinstance(controls, dict) or controls.get("next") or controls.get("previous")
+            else MediaPlayerEntityFeature(0)
+        )
         track = player.get("trackRoles") or {}
         # On a physical input the amp still sends trackRoles, with empty metadata.
         if not track.get("title"):
@@ -203,7 +211,20 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
             )
         await self._call(lambda: self.coordinator.client.set_source(index))
 
+    @property
+    def _service_id(self) -> str | None:
+        """The streaming service behind the current track, e.g. "spotify"."""
+        player = self.coordinator.data.player if self.coordinator.data else {}
+        for roles in ("trackRoles", "mediaRoles"):
+            meta = ((player.get(roles) or {}).get("mediaData") or {}).get("metaData") or {}
+            if meta.get("serviceID"):
+                return meta["serviceID"]
+        return None
+
     async def async_media_play(self) -> None:
+        if self._service_id == "spotify":
+            await self._call(self.coordinator.client.spotify_resume)
+            return
         await self._call(lambda: self.coordinator.client.control("play"))
 
     async def async_media_pause(self) -> None:

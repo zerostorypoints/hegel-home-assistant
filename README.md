@@ -22,7 +22,9 @@ mute, input, playback, now playing and the stream format. No cloud and no accoun
 - **Power on and standby** from Home Assistant, automations and voice assistants.
 - **Volume, mute and input**, with the input names this model reports (XLR, Analog 1, BNC,
   Coaxial, Optical, USB, Network on an H400).
-- **Playback** for the built-in streamer: play, pause, stop, next, previous, with title, artist,
+- **Playback** for the built-in streamer: play, pause, stop, next, previous (next and previous
+  only while the amp's player offers them: Spotify Connect gives it pause alone, and play on a
+  Spotify stream resumes the Spotify session), with title, artist,
   album, cover art, streaming service, track length and position.
 - **Stream format sensors**: audio quality (Hi-Res, CD quality, Lossless, Lossy, DSD), codec,
   sample rate, bit depth, bitrate, streaming service.

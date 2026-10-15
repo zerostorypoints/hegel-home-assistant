@@ -25,6 +25,9 @@ SOURCES = {1: "XLR", 2: "Analog 1", 3: "Analog 2", 9: "USB", 10: "Network"}
 # Trimmed from a real H400 answer while playing Spotify.
 PLAYER_SPOTIFY: dict[str, Any] = {
     "state": "playing",
+    # Spotify Connect offers the amp's API only pause (settings:/spotify/allowExternalControls
+    # is false and not modifiable); next and previous come back "Control is not supported".
+    "controls": {"pause": True},
     "mediaRoles": {"title": "Discover Weekly"},
     "status": {"duration": 265546},
     "trackRoles": {
@@ -36,6 +39,7 @@ PLAYER_SPOTIFY: dict[str, Any] = {
                 "album": "The Great Living Library (Orenda Remix)",
                 "artist": "Deya Dova",
                 "serviceName": "Spotify",
+                "serviceID": "spotify",
             },
         },
     },
