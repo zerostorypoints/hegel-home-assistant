@@ -35,9 +35,10 @@ PATH_SOURCES = "hegel:listPhysicalSources"
 PATH_PLAYER_DATA = "player:player/data"
 PATH_PLAYER_CONTROL = "player:player/control"
 PATH_PLAY_TIME = "player:player/data/playTime"
-# Spotify Connect: the amp's player takes only "pause" for it (settings:/spotify/allowExternalControls
-# is false and not modifiable, "needs Spotify approval"); "play" after a pause ends the Spotify
-# session with "Directory is empty", while this action resumes it, from paused or stopped.
+# Spotify Connect: the amp's player takes only "pause" for it
+# (settings:/spotify/allowExternalControls is false and not modifiable, "needs Spotify approval");
+# "play" after a pause ends the Spotify session with "Directory is empty", while this action
+# resumes it, from paused or stopped.
 PATH_SPOTIFY_RESUME = "spotify:/ui/resume"
 PATH_MEMBER = "systemmanager:systemMember"
 PATH_MODEL = "settings:/system/productName"
