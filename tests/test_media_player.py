@@ -6,11 +6,11 @@ import copy
 
 from homeassistant.components.media_player import (
     ATTR_INPUT_SOURCE,
-    MediaPlayerEntityFeature,
     ATTR_MEDIA_VOLUME_LEVEL,
     ATTR_MEDIA_VOLUME_MUTED,
     DOMAIN as MP_DOMAIN,
     SERVICE_SELECT_SOURCE,
+    MediaPlayerEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import (
