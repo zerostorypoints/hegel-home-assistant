@@ -211,6 +211,50 @@ automation:
           entity_id: media_player.h400
 ```
 
+## With DomoSenso
+
+[DomoSenso](https://domosenso.org) is an open framework for building a home on Home Assistant
+from tested components, made by the same team
+([zerostorypoints/domosenso](https://github.com/zerostorypoints/domosenso) on GitHub). Its
+`media` component already uses this integration, tested with an H400: it names
+`hegel_streaming` as the integration to install from HACS, recognises the amplifier among your
+Home Assistant devices, and feeds the music view of the DomoSenso Frame wall tablet.
+
+In short, with Home Assistant running as a Container:
+
+1. Install this integration through HACS and add the amp in Home Assistant, as above.
+2. Clone DomoSenso and start your coding agent in the clone (git, gh, uv and Claude Code or Codex
+   are listed in its README):
+
+   ```bash
+   gh repo clone zerostorypoints/domosenso
+   cd domosenso
+   uv sync
+   claude
+   ```
+
+   In Claude Code, type `/onboard-home` (with Codex, ask it to run the onboard-home skill). The
+   agent scans your Home Assistant (`domosenso recommend --from-ha`), finds the amp through
+   `hegel_streaming` and recommends the `media` component.
+3. The agent adds `media` to your home repository and points it at the `hegel_streaming` media
+   player. Home Assistant may also create `cast` and `dlna_dmr` players for the same amp; those
+   are not the ones to use.
+4. `domosenso deploy production --plan` shows what would change; after your yes, `--apply` puts
+   it into Home Assistant and `domosenso verify` checks that everything that worked before still
+   works.
+
+The H400 is the tested model. The catalog does not list the H150, H200 and H600 yet, so the scan
+shows them as unmatched; DomoSenso's
+[Integrate a device](https://github.com/zerostorypoints/domosenso/blob/main/docs/integrate-a-device.md)
+guide adds one, with the Hegel H400 as its worked example.
+
+## Hegel on HiFiSync
+
+Components can be checked on HiFiSync before they go into a system: sourced specs, a comparison
+with other models, and how well an amplifier fits your speakers. Hegel's range, the H150, H200,
+H400 and H600 included:
+[Hegel on HiFiSync](https://hifisync.com/brands/hegel?utm_source=github&utm_medium=readme&utm_campaign=hegel_streaming).
+
 ## Troubleshooting
 
 - **Not discovered.** Discovery uses mDNS (`_sues800device._tcp`). It does not cross VLANs
