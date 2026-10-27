@@ -80,6 +80,7 @@ def client() -> Generator[AsyncMock]:
         mock.get_device_info.return_value = DEVICE
         mock.get_sources.return_value = SOURCES
         mock.get_state.return_value = playing_state()
+        mock.get_radio_favorites.return_value = {}
         yield mock
 
 

@@ -102,7 +102,7 @@
       "message": "Wzmacniacz jest wyłączony. Najpierw go włącz."
     },
     "unknown_source": {
-      "message": "Ten wzmacniacz nie ma wejścia {source}."
+      "message": "Ten wzmacniacz nie ma wejścia ani ulubionej stacji radiowej {source}."
     },
     "command_failed": {
       "message": "Wzmacniacz odrzucił polecenie: {error}"

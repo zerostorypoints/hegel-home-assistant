@@ -12,6 +12,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 from custom_components.hegel_streaming.api import (
     HegelClient,
     HegelConnectionError,
+    HegelError,
     HegelQueueExpiredError,
     HegelState,
     async_has_ip_control,
@@ -101,6 +102,111 @@ async def test_power_on_payload(hass: HomeAssistant, aioclient_mock: AiohttpClie
         "role": "activate",
         "value": {},
     }
+
+
+RADIOS = "airable:https://1.airable.io/airable/radios"
+FAVORITES = f"{RADIOS}/favorites"
+FOLK = "airable:https://1.airable.io/id/airable/radio/3318728303536773"
+# Trimmed from a real H400 favourite (2026-10-27): the playable station inside the container.
+FOLK_STATION = {
+    "title": "Folk Radio 91.6",
+    "type": "audio",
+    "audioType": "audioBroadcast",
+    "id": "airable://airable/radio/3318728303536773",
+    "path": FOLK,
+    "mediaData": {
+        "metaData": {
+            "prePlayPath": "airable:preplay?serviceType=airable&dataType=radio"
+            "&objectId=3318728303536773",
+            "serviceID": "airableRadios",
+        },
+        "resources": [{"mimeType": "audio/mpeg", "data": "https://1.airable.io/play/1"}],
+    },
+}
+
+
+def _rows(aioclient_mock: AiohttpClientMocker, path: str, **answer: object) -> None:
+    aioclient_mock.get(
+        f"{BASE}/api/getRows",
+        params={"path": path, "roles": "@all", "from": 0, "to": 50},
+        json=answer,
+    )
+
+
+async def test_radio_favorites(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    _rows(aioclient_mock, "airable:linkService_airable.radios", rows=[], rowsRedirect=RADIOS)
+    _rows(
+        aioclient_mock,
+        RADIOS,
+        rows=[
+            {"title": "History", "id": "airable://airable.radios/directory/history"},
+            {
+                "title": "Favoriten",
+                "id": "airable://airable.radios/directory/favorites",
+                "path": FAVORITES,
+            },
+        ],
+    )
+    _rows(
+        aioclient_mock,
+        FAVORITES,
+        rows=[
+            {"title": "Folk Radio 91.6", "type": "container", "path": FOLK},
+            {"title": "Radio 2050", "type": "container", "path": f"{FOLK}0"},
+        ],
+    )
+    session = async_get_clientsession(hass)
+    assert await HegelClient("amp", session).get_radio_favorites() == {
+        "Folk Radio 91.6": FOLK,
+        "Radio 2050": f"{FOLK}0",
+    }
+
+
+async def test_radio_favorites_without_airable(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    _rows(aioclient_mock, "airable:linkService_airable.radios", rows=[])
+    session = async_get_clientsession(hass)
+    assert await HegelClient("amp", session).get_radio_favorites() == {}
+
+
+async def test_play_radio(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    """The station is played as the favourite container lists it, the way the web client does."""
+    _rows(aioclient_mock, FOLK, rows=[FOLK_STATION])
+    aioclient_mock.post(f"{BASE}/api/setData", text="6")
+    session = async_get_clientsession(hass)
+    await HegelClient("amp", session).play_radio(FOLK)
+    assert aioclient_mock.mock_calls[-1][2] == {
+        "path": "player:player/control",
+        "role": "activate",
+        "value": {
+            "control": "play",
+            "mediaRoles": FOLK_STATION,
+            "trackRoles": FOLK_STATION,
+            "index": 0,
+        },
+    }
+
+
+async def test_play_radio_sends_nothing_without_a_station(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A play the amp cannot resolve stops the music, so it is not sent at all."""
+    _rows(aioclient_mock, FOLK, rows=[{"title": "Folk Radio 91.6", "type": "container"}])
+    session = async_get_clientsession(hass)
+    with pytest.raises(HegelError, match="No playable station"):
+        await HegelClient("amp", session).play_radio(FOLK)
+    assert all(call[0] == "GET" for call in aioclient_mock.mock_calls)
+
+
+async def test_rows_error(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    aioclient_mock.get(
+        f"{BASE}/api/getRows",
+        json={"error": {"message": "Node at path 'x:' does not exist"}},
+    )
+    session = async_get_clientsession(hass)
+    with pytest.raises(HegelError, match="does not exist"):
+        await HegelClient("amp", session).get_rows("x:")
 
 
 def _fake_connection(reply: bytes | None):

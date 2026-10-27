@@ -1,8 +1,9 @@
-"""Media player entity: power, volume, mute, input and playback."""
+"""Media player entity: power, volume, mute, input, radio favourites and playback."""
 
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+import contextlib
 
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
@@ -98,13 +99,18 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
             return
 
         sources = self.coordinator.sources
-        self._attr_source_list = [
+        inputs = [
             self._display_name(name)
             for name in sources.values()
             if name not in self._hidden_sources
-        ] or None
+        ]
+        # Radio favourites follow the inputs; an input of the same name wins.
+        stations = [name for name in self.coordinator.radio_favorites if name not in inputs]
+        self._attr_source_list = inputs + stations or None
         amp_name = sources.get(state.source) if state.source else None
-        self._attr_source = self._display_name(amp_name) if amp_name else None
+        self._attr_source = self._playing_favorite(state.player) or (
+            self._display_name(amp_name) if amp_name else None
+        )
         self._attr_volume_level = state.volume / 100 if state.volume is not None else None
         self._attr_is_volume_muted = state.muted
 
@@ -138,6 +144,15 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
         else:
             self._attr_media_position = None
             self._attr_media_position_updated_at = None
+
+    def _playing_favorite(self, player: dict) -> str | None:
+        """The favourite station being played, matched by the path the amp plays it from."""
+        path = (player.get("mediaRoles") or {}).get("path")
+        if not path or player.get("state") not in PLAYER_STATES:
+            return None
+        return next(
+            (name for name, fav in self.coordinator.radio_favorites.items() if fav == path), None
+        )
 
     def _display_name(self, amp_name: str) -> str:
         return self._source_names.get(amp_name) or amp_name
@@ -203,13 +218,23 @@ class HegelMediaPlayer(HegelEntity, MediaPlayerEntity):
             ),
             None,
         )
-        if index is None:
+        if index is not None:
+            await self._call(lambda: self.coordinator.client.set_source(index))
+            return
+        path = self.coordinator.radio_favorites.get(source)
+        if path is None and self.coordinator.data and self.coordinator.data.is_on:
+            # A station added in the Hegel app since the last read, or a list not read yet
+            # right after power on.
+            with contextlib.suppress(HegelError):
+                await self.coordinator.async_read_favorites(force=True)
+            path = self.coordinator.radio_favorites.get(source)
+        if path is None:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="unknown_source",
                 translation_placeholders={"source": source},
             )
-        await self._call(lambda: self.coordinator.client.set_source(index))
+        await self._call(lambda: self.coordinator.client.play_radio(path))
 
     @property
     def _service_id(self) -> str | None:

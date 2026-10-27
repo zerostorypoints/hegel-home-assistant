@@ -102,7 +102,7 @@
       "message": "The amplifier is turned off. Turn it on first."
     },
     "unknown_source": {
-      "message": "This amplifier has no input called {source}."
+      "message": "This amplifier has no input or radio favourite called {source}."
     },
     "command_failed": {
       "message": "The amplifier rejected the command: {error}"

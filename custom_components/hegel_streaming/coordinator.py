@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 from dataclasses import replace
 import logging
+import time
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -22,7 +23,14 @@ from .api import (
     HegelQueueExpiredError,
     HegelState,
 )
-from .const import CONF_SOURCES, DOMAIN, EVENT_POLL_TIMEOUT, RECONNECT_INTERVAL, SCAN_INTERVAL
+from .const import (
+    CONF_SOURCES,
+    DOMAIN,
+    EVENT_POLL_TIMEOUT,
+    FAVORITES_INTERVAL,
+    RECONNECT_INTERVAL,
+    SCAN_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +68,9 @@ class HegelCoordinator(DataUpdateCoordinator[HegelState]):
             int(index): name for index, name in entry.data.get(CONF_SOURCES, {}).items()
         }
         self._sources_fresh = False
+        # airable radio favourites, {station name: path}, read while the amp is on.
+        self.radio_favorites: dict[str, str] = {}
+        self._favorites_read_at: float | None = None
         self._was_reachable = True
 
     async def _async_update_data(self) -> HegelState:
@@ -67,6 +78,8 @@ class HegelCoordinator(DataUpdateCoordinator[HegelState]):
             state = await self.client.get_state()
             if not self._sources_fresh and state.is_on:
                 self._async_set_sources(await self.client.get_sources())
+            if state.is_on:
+                await self.async_read_favorites()
         except HegelConnectionError as err:
             if self._was_reachable:
                 _LOGGER.info("%s is not responding, reporting it as off: %s", self.device.name, err)
@@ -91,6 +104,26 @@ class HegelCoordinator(DataUpdateCoordinator[HegelState]):
             self.hass.config_entries.async_update_entry(
                 self.config_entry, data={**self.config_entry.data, CONF_SOURCES: cached}
             )
+
+    async def async_read_favorites(self, force: bool = False) -> None:
+        """Read the radio favourites, at most every FAVORITES_INTERVAL unless forced."""
+        now = time.monotonic()
+        if (
+            not force
+            and self._favorites_read_at is not None
+            and now - self._favorites_read_at < FAVORITES_INTERVAL.total_seconds()
+        ):
+            return
+        try:
+            self.radio_favorites = await self.client.get_radio_favorites()
+        except HegelConnectionError:
+            raise
+        except HegelError as err:
+            # The list comes from airable's servers through the amp, which may not be ready
+            # right after power on. Keep the last list and try again with the next refresh.
+            _LOGGER.debug("Could not read the radio favourites of %s: %s", self.device.name, err)
+            return
+        self._favorites_read_at = now
 
     async def async_run_event_loop(self) -> None:
         """Long-poll the amp's event queue for as long as the entry is loaded."""
@@ -132,8 +165,10 @@ class HegelCoordinator(DataUpdateCoordinator[HegelState]):
                 state.apply(PATH_PLAY_TIME, await self.client.get(PATH_PLAY_TIME))
             except HegelError:
                 state.play_time_ms = None
-        if PATH_POWER in changed_paths and state.is_on and not self._sources_fresh:
+        if PATH_POWER in changed_paths and state.is_on:
             with contextlib.suppress(HegelError):
-                self._async_set_sources(await self.client.get_sources())
+                if not self._sources_fresh:
+                    self._async_set_sources(await self.client.get_sources())
+                await self.async_read_favorites(force=True)
         self._was_reachable = True
         self.async_set_updated_data(state)

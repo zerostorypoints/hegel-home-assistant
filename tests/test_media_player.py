@@ -32,7 +32,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.hegel_streaming.api import HegelConnectionError, HegelState
+from custom_components.hegel_streaming.api import HegelConnectionError, HegelError, HegelState
 from custom_components.hegel_streaming.const import CONF_MAX_VOLUME
 
 from .conftest import HOST, PLAYER_SPOTIFY, playing_state
@@ -298,6 +298,134 @@ async def test_push_events(hass: HomeAssistant, config_entry, client, no_event_l
     )
     await hass.async_block_till_done()
     assert hass.states.get(PLAYER).state == STATE_OFF
+
+
+FOLK = "airable:https://1.airable.io/id/airable/radio/3318728303536773"
+RADIO_2050 = "airable:https://1.airable.io/id/airable/radio/1"
+
+
+def radio_state(path: str = FOLK) -> HegelState:
+    """Playing an airable station, as the amp reports it (trimmed)."""
+    player = {
+        "state": "playing",
+        "controls": {"next_": False, "previous": False},
+        "mediaRoles": {"title": "Folk Radio 91.6", "path": path, "audioType": "audioBroadcast"},
+        "trackRoles": {
+            "title": "ALPINI - ANTZI",
+            "path": path,
+            "mediaData": {"metaData": {"serviceName": "airable Radio"}},
+        },
+    }
+    return playing_state(player=player)
+
+
+async def test_radio_favorites(hass: HomeAssistant, config_entry, client, no_event_loop) -> None:
+    """Favourite stations follow the inputs; selecting one plays it."""
+    client.get_radio_favorites.return_value = {"Folk Radio 91.6": FOLK, "Radio 2050": RADIO_2050}
+    client.get_state.return_value = radio_state()
+    await setup(hass, config_entry)
+
+    state = hass.states.get(PLAYER)
+    assert state.attributes["source_list"] == [
+        "XLR",
+        "Analog 1",
+        "Analog 2",
+        "USB",
+        "Network",
+        "Folk Radio 91.6",
+        "Radio 2050",
+    ]
+    assert state.attributes[ATTR_INPUT_SOURCE] == "Folk Radio 91.6"
+
+    await hass.services.async_call(
+        MP_DOMAIN,
+        SERVICE_SELECT_SOURCE,
+        {ATTR_ENTITY_ID: PLAYER, ATTR_INPUT_SOURCE: "Radio 2050"},
+        blocking=True,
+    )
+    client.play_radio.assert_awaited_once_with(RADIO_2050)
+    client.set_source.assert_not_awaited()
+
+
+async def test_radio_outside_favorites_shows_the_input(
+    hass: HomeAssistant, config_entry, client, no_event_loop
+) -> None:
+    client.get_radio_favorites.return_value = {"Radio 2050": RADIO_2050}
+    client.get_state.return_value = radio_state()
+    await setup(hass, config_entry)
+    assert hass.states.get(PLAYER).attributes[ATTR_INPUT_SOURCE] == "Network"
+
+
+async def test_input_wins_over_a_favorite_of_the_same_name(
+    hass: HomeAssistant, config_entry, client, no_event_loop
+) -> None:
+    client.get_radio_favorites.return_value = {"USB": FOLK}
+    await setup(hass, config_entry)
+    assert hass.states.get(PLAYER).attributes["source_list"].count("USB") == 1
+    await hass.services.async_call(
+        MP_DOMAIN,
+        SERVICE_SELECT_SOURCE,
+        {ATTR_ENTITY_ID: PLAYER, ATTR_INPUT_SOURCE: "USB"},
+        blocking=True,
+    )
+    client.set_source.assert_awaited_with(9)
+    client.play_radio.assert_not_awaited()
+
+
+async def test_radio_favorites_read_sparingly(
+    hass: HomeAssistant, config_entry, client, no_event_loop
+) -> None:
+    """The list is read once per FAVORITES_INTERVAL, again at power on, and kept on errors."""
+    client.get_radio_favorites.return_value = {"Radio 2050": RADIO_2050}
+    await setup(hass, config_entry)
+    await refresh(hass, config_entry)
+    assert client.get_radio_favorites.await_count == 1
+
+    client.get_radio_favorites.side_effect = HegelError("airable did not answer")
+    await config_entry.runtime_data._async_handle_events(
+        [
+            {
+                "path": "powermanager:target",
+                "itemType": "update",
+                "itemValue": {"powerTarget": {"target": "online"}, "type": "powerTarget"},
+            },
+        ]
+    )
+    await hass.async_block_till_done()
+    assert client.get_radio_favorites.await_count == 2
+    assert hass.states.get(PLAYER).state == STATE_PLAYING
+    assert "Radio 2050" in hass.states.get(PLAYER).attributes["source_list"]
+
+
+async def test_new_favorite_is_read_on_select(
+    hass: HomeAssistant, config_entry, client, no_event_loop
+) -> None:
+    """A station added in the Hegel app since the last read plays without waiting."""
+    await setup(hass, config_entry)
+    client.get_radio_favorites.return_value = {"Radio 2050": RADIO_2050}
+    await hass.services.async_call(
+        MP_DOMAIN,
+        SERVICE_SELECT_SOURCE,
+        {ATTR_ENTITY_ID: PLAYER, ATTR_INPUT_SOURCE: "Radio 2050"},
+        blocking=True,
+    )
+    client.play_radio.assert_awaited_once_with(RADIO_2050)
+
+    with pytest.raises(ServiceValidationError, match="Phono"):
+        await hass.services.async_call(
+            MP_DOMAIN,
+            SERVICE_SELECT_SOURCE,
+            {ATTR_ENTITY_ID: PLAYER, ATTR_INPUT_SOURCE: "Phono"},
+            blocking=True,
+        )
+
+
+async def test_radio_favorites_not_read_in_standby(
+    hass: HomeAssistant, config_entry, client, no_event_loop
+) -> None:
+    client.get_state.return_value = HegelState(reachable=True, power="networkStandby")
+    await setup(hass, config_entry)
+    client.get_radio_favorites.assert_not_awaited()
 
 
 async def test_diagnostics_and_unload(
