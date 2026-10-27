@@ -22,6 +22,8 @@ mute, input, playback, now playing and the stream format. No cloud and no accoun
 - **Power on and standby** from Home Assistant, automations and voice assistants.
 - **Volume, mute and input**, with the input names this model reports (XLR, Analog 1, BNC,
   Coaxial, Optical, USB, Network on an H400).
+- **Radio favourites.** Stations you add to the amp's airable radio favourites appear in the
+  input list after the inputs. Selecting one starts it, so an automation can play a station.
 - **Playback** for the built-in streamer: play, pause, stop, next, previous (next and previous
   only while the amp's player offers them: Spotify Connect gives it pause alone, and play on a
   Spotify stream resumes the Spotify session), with title, artist,
@@ -115,7 +117,7 @@ For an amp named `H400`:
 
 | Entity | What it does |
 |---|---|
-| `media_player.h400` | Power, volume, mute, input (source), playback, now playing |
+| `media_player.h400` | Power, volume, mute, input (source) and radio favourites, playback, now playing |
 | `sensor.h400_audio_quality` | `Hi-Res`, `CD quality`, `Lossless`, `Lossy`, `DSD` while the streamer plays |
 | `sensor.h400_codec` | As reported by the stream (Spotify reports none) |
 | `sensor.h400_sample_rate` | kHz |
@@ -134,6 +136,15 @@ For an amp named `H400`:
 
 Turning on from standby works from Home Assistant. An amp that does not answer cannot be woken
 over the network; the turn-on action then says so.
+
+### Radio favourites
+
+Add a station to the favourites in the Hegel app or the web client
+(`http://<amp-address>/webclient/`): Playback → airable Radio → a station → **Add to Radio
+favorites**. Home Assistant reads the list while the amp is on, at power on and every five
+minutes, and lists the stations after the inputs. Selecting a station plays it; the amp switches
+to its Network input by itself. While a favourite plays, the media player shows it as the current
+input. An input with the same name as a station takes precedence.
 
 Stream format sensors have a value only while the built-in streamer is playing or paused, not
 while a physical input (XLR, analog, optical, USB) is in use.
@@ -157,6 +168,32 @@ Dashboard card:
 ```yaml
 type: media-control
 entity: media_player.h400
+```
+
+Morning radio (the station must be in the amp's radio favourites):
+
+```yaml
+automation:
+  - alias: Hegel morning radio
+    triggers:
+      - trigger: time
+        at: "07:00:00"
+    actions:
+      - action: media_player.turn_on
+        target:
+          entity_id: media_player.h400
+      - wait_template: "{{ not is_state('media_player.h400', 'off') }}"
+        timeout: "00:00:30"
+      - action: media_player.volume_set
+        target:
+          entity_id: media_player.h400
+        data:
+          volume_level: 0.35
+      - action: media_player.select_source
+        target:
+          entity_id: media_player.h400
+        data:
+          source: Deutschlandfunk
 ```
 
 Put the amp in standby when everyone leaves:

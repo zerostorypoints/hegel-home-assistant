@@ -10,7 +10,8 @@ firmware 1205.1011). Its web server, used by the amp's own web client at /webcli
     POST /api/event/modifyQueue                       create or change an event queue
     GET  /api/event/pollQueue?queueId&timeout         long-poll the queue for changes
 
-Values are typed: {"type": "i32_", "i32_": 35}.
+Values are typed: {"type": "i32_", "i32_": 35}. A list node may answer with no rows and a
+"rowsRedirect" to the node that holds them.
 """
 
 from __future__ import annotations
@@ -40,6 +41,11 @@ PATH_PLAY_TIME = "player:player/data/playTime"
 # "play" after a pause ends the Spotify session with "Directory is empty", while this action
 # resumes it, from paused or stopped.
 PATH_SPOTIFY_RESUME = "spotify:/ui/resume"
+# airable internet radio. The service redirects to an amp-specific host,
+# e.g. airable:https://2880507696.airable.io/airable/radios. Its favourites are the stations
+# added with "Add to Radio favorites" in the Hegel app or the web client.
+PATH_RADIOS = "airable:linkService_airable.radios"
+RADIO_FAVORITES_ID = "airable://airable.radios/directory/favorites"
 PATH_MEMBER = "systemmanager:systemMember"
 PATH_MODEL = "settings:/system/productName"
 PATH_MANUFACTURER = "settings:/system/manufacturer"
@@ -51,6 +57,7 @@ PATH_VERSION = "settings:/version"
 EVENT_PATHS = (PATH_POWER, PATH_VOLUME, PATH_MUTE, PATH_SOURCE, PATH_PLAYER_DATA)
 
 POWER_ONLINE = "online"
+MAX_REDIRECTS = 3
 
 
 class HegelError(Exception):
@@ -167,13 +174,20 @@ class HegelClient:
         return unwrap(data)
 
     async def get_rows(self, path: str, limit: int = 50) -> list[dict[str, Any]]:
-        """Read the rows of a list node."""
-        data = await self._request(
-            "GET",
-            "/api/getRows",
-            params={"path": path, "roles": "@all", "from": 0, "to": limit},
-        )
-        return list((data or {}).get("rows", []))
+        """Read the rows of a list node, following redirects."""
+        for _ in range(MAX_REDIRECTS + 1):
+            data = await self._request(
+                "GET",
+                "/api/getRows",
+                params={"path": path, "roles": "@all", "from": 0, "to": limit},
+            )
+            data = data or {}
+            if "error" in data:
+                raise HegelError(data["error"].get("message", "API error"))
+            if data.get("rows") or not data.get("rowsRedirect"):
+                return list(data.get("rows", []))
+            path = data["rowsRedirect"]
+        raise HegelError(f"Too many redirects reading {path}")
 
     async def set_value(self, path: str, value: dict[str, Any]) -> None:
         """Write a typed value to a node."""
@@ -260,6 +274,42 @@ class HegelClient:
     async def spotify_resume(self) -> None:
         """Resume Spotify Connect playback (the only "play" the amp accepts for Spotify)."""
         await self.activate(PATH_SPOTIFY_RESUME)
+
+    async def get_radio_favorites(self) -> dict[str, str]:
+        """airable radio favourites as {station name: path}, in the amp's order."""
+        directory = next(
+            (
+                row
+                for row in await self.get_rows(PATH_RADIOS)
+                if row.get("id") == RADIO_FAVORITES_ID
+            ),
+            None,
+        )
+        if directory is None:
+            return {}
+        return {
+            row["title"]: row["path"]
+            for row in await self.get_rows(directory["path"])
+            if row.get("title") and row.get("path")
+        }
+
+    async def play_radio(self, path: str) -> None:
+        """Start a favourite station. The amp switches to its Network input by itself.
+
+        A favourite is a container holding the playable station. The player takes only that
+        station as the amp lists it: a row from the play history fails with "Playback Url is
+        empty", and a node read with getData with "Directory is empty". A failed play stops
+        what was playing and returns the amp to a physical input, so nothing else is sent.
+        """
+        station = next(
+            (row for row in await self.get_rows(path) if row.get("type") == "audio"), None
+        )
+        if station is None:
+            raise HegelError(f"No playable station at {path}")
+        await self.activate(
+            PATH_PLAYER_CONTROL,
+            {"control": "play", "mediaRoles": station, "trackRoles": station, "index": 0},
+        )
 
     # Events
 
