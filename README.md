@@ -248,6 +248,13 @@ shows them as unmatched; DomoSenso's
 [Integrate a device](https://github.com/zerostorypoints/domosenso/blob/main/docs/integrate-a-device.md)
 guide adds one, with the Hegel H400 as its worked example.
 
+## Hegel on HiFiSync
+
+Components can be checked on HiFiSync before they go into a system: sourced specs, a comparison
+with other models, and how well an amplifier fits your speakers. Hegel's range, the H150, H200,
+H400 and H600 included:
+[Hegel on HiFiSync](https://hifisync.com/brands/hegel?utm_source=github&utm_medium=readme&utm_campaign=hegel_streaming).
+
 ## Troubleshooting
 
 - **Not discovered.** Discovery uses mDNS (`_sues800device._tcp`). It does not cross VLANs
