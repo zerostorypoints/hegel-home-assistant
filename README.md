@@ -41,7 +41,7 @@ Hegel has two generations of network amplifiers, and they are controlled in diff
 
 ### Streaming generation: this integration
 
-The H150, H400 and H600 run a StreamUnlimited streaming platform. They are set up with the
+The H150, H200, H400 and H600 run a StreamUnlimited streaming platform. They are set up with the
 [Hegel Control app](https://support.hegel.com/product-articles/hegel-setup-app) and have a web
 client at `http://<amp-address>/webclient/`. This integration uses the same local web API as that
 app and web client.
@@ -49,8 +49,8 @@ app and web client.
 | Model | Firmware | Status |
 |---|---|---|
 | H400 | 1205.1011 | Tested |
+| H200 | 1205.1011 | Tested by a user ([#1](https://github.com/zerostorypoints/hegel-home-assistant/issues/1)): all features work |
 | H150, H600 | | Same platform, expected to work, not tested yet |
-| H200 | | Listed in the H400 firmware's model table, so probably the same platform; not tested |
 
 If you own one of the untested models, please
 [report whether it works](https://github.com/zerostorypoints/hegel-home-assistant/issues/new?template=model_report.yml).
