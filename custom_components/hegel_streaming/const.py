@@ -21,5 +21,3 @@ EVENT_POLL_TIMEOUT: Final = 25
 FAVORITES_INTERVAL: Final = timedelta(minutes=5)
 
 CORE_HEGEL_URL: Final = "https://www.home-assistant.io/integrations/hegel/"
-ZSP_URL: Final = "https://zerostorypoints.com/?utm_source=home-assistant&utm_medium=integration&utm_campaign=hegel_streaming"
-HIFISYNC_URL: Final = "https://hifisync.com/?utm_source=home-assistant&utm_medium=integration&utm_campaign=hegel_streaming"

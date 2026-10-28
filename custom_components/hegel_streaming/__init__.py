@@ -1,6 +1,6 @@
 """Hegel Streaming: Home Assistant integration for Hegel network amplifiers.
 
-Brought to you by HiFiSync (https://hifisync.com). Made by Zero Story Points.
+Made by Zero Story Points.
 """
 
 from __future__ import annotations

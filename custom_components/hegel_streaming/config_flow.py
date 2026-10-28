@@ -33,11 +33,7 @@ from .const import (
     CORE_HEGEL_URL,
     DEFAULT_MAX_VOLUME,
     DOMAIN,
-    HIFISYNC_URL,
-    ZSP_URL,
 )
-
-CREDITS = {"hifisync_url": HIFISYNC_URL, "zsp_url": ZSP_URL}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,7 +81,7 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Schema({vol.Required(CONF_HOST): str}), user_input
             ),
             errors=errors,
-            description_placeholders={**CREDITS, "core_url": CORE_HEGEL_URL},
+            description_placeholders={"core_url": CORE_HEGEL_URL},
         )
 
     async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
@@ -146,7 +142,6 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
                 "name": self._device.name,
                 "model": self._device.model,
                 "host": self._host,
-                **CREDITS,
             },
         )
 
@@ -169,7 +164,7 @@ class HegelConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Schema({vol.Required(CONF_HOST): str}), user_input or entry.data
             ),
             errors=errors,
-            description_placeholders={**CREDITS, "core_url": CORE_HEGEL_URL},
+            description_placeholders={"core_url": CORE_HEGEL_URL},
         )
 
 
@@ -202,7 +197,6 @@ class HegelOptionsFlow(OptionsFlowWithReload):
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(schema, self.config_entry.options),
-            description_placeholders=CREDITS,
         )
 
     async def async_step_inputs(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -237,6 +231,4 @@ class HegelOptionsFlow(OptionsFlowWithReload):
                 options=sources, multiple=True, mode=selector.SelectSelectorMode.LIST
             )
         )
-        return self.async_show_form(
-            step_id="inputs", data_schema=vol.Schema(fields), description_placeholders=CREDITS
-        )
+        return self.async_show_form(step_id="inputs", data_schema=vol.Schema(fields))

@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Hegel amplifier",
-        "description": "Enter the IP address or host name of your Hegel streaming amplifier. It must be on the same network as Home Assistant.\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics. Made by [Zero Story Points]({zsp_url}).",
+        "description": "Enter the IP address or host name of your Hegel streaming amplifier. It must be on the same network as Home Assistant.",
         "data": {
           "host": "Host"
         },
@@ -14,14 +14,14 @@
       },
       "zeroconf_confirm": {
         "title": "Hegel amplifier found",
-        "description": "Add {name} ({model}) at {host}?\n\nTip: reserve {host} for the amplifier in your router (a DHCP reservation or static lease). If the address changes, Home Assistant finds the amp again, but only while it is on the network.\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics. Made by [Zero Story Points]({zsp_url})."
+        "description": "Add {name} ({model}) at {host}?\n\nTip: reserve {host} for the amplifier in your router (a DHCP reservation or static lease). If the address changes, Home Assistant finds the amp again, but only while it is on the network."
       },
       "reconfigure": {
         "title": "Change the amplifier address",
         "data": {
           "host": "Host"
         },
-        "description": "Enter the new address of the amplifier.\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics. Made by [Zero Story Points]({zsp_url})."
+        "description": "Enter the new address of the amplifier."
       }
     },
     "error": {
@@ -48,12 +48,11 @@
         },
         "data_description": {
           "max_volume": "Home Assistant never sets the volume above this, so a slipped slider cannot drive the amp to full power. The amp's own remote is not limited."
-        },
-        "description": "Brought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics. Made by [Zero Story Points]({zsp_url})."
+        }
       },
       "inputs": {
         "title": "Inputs",
-        "description": "Give inputs your own names, for example Turntable for Analog 1. Leave a field empty to keep the amplifier's name. Hidden inputs are left out of the input list; the amplifier can still switch to them.\n\nBrought to you by [HiFiSync]({hifisync_url}): hi-fi system matching grounded in physics. Made by [Zero Story Points]({zsp_url}).",
+        "description": "Give inputs your own names, for example Turntable for Analog 1. Leave a field empty to keep the amplifier's name. Hidden inputs are left out of the input list; the amplifier can still switch to them.",
         "data": {
           "hidden_sources": "Hidden inputs"
         }
